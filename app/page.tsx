@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, ChangeEvent, FormEvent } from "react";
 import { toPng } from "html-to-image";
-import { collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, getDoc, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, query, doc, updateDoc, getDoc, where, getDocs, DocumentData, QuerySnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,27 +10,37 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+interface MemberData {
+  fullName: string;
+  phoneNumber: string;
+  idNumber: string;
+  county: string;
+  constituency: string;
+  ward: string;
+  id?: string;
+  [key: string]: any;
+}
+
 export default function LionsMovementPlatform() {
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<MemberData>({
     fullName: "",
     phoneNumber: "",
     idNumber: "",
     county: "",
     constituency: "",
     ward: "",
-    photo: "",
   });
   
-  const [registeredUser, setRegisteredUser] = useState<any>(null);
+  const [registeredUser, setRegisteredUser] = useState<MemberData | null>(null);
   const [currentDocId, setCurrentDocId] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [allMembers, setAllMembers] = useState<any[]>([]);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [allMembers, setAllMembers] = useState<MemberData[]>([]);
 
-  // 1. PERSISTENT SESSION RECOVERY
+  // 1. PERSISTENT SESSION RECOVERY (Targeting 'lions_members')
   useEffect(() => {
     const savedDocId = localStorage.getItem("lions_doc_id");
     if (savedDocId) {
@@ -41,7 +51,7 @@ export default function LionsMovementPlatform() {
           const docRef = doc(db, "lions_members", savedDocId);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-            setRegisteredUser(docSnap.data());
+            setRegisteredUser(docSnap.data() as MemberData);
           } else {
             localStorage.removeItem("lions_doc_id");
             setCurrentDocId(null);
@@ -55,50 +65,42 @@ export default function LionsMovementPlatform() {
     }
   }, []);
 
-  // 2. LIVE STREAM ADMIN DATA
+  // 2. LIVE STREAM ADMIN DATA (Fetches from 'lions_members')
   useEffect(() => {
     if (!isAdmin) return;
     
-    const q = query(collection(db, "lions_members"), orderBy("timestamp", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const membersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+    const q = query(collection(db, "lions_members"));
+    const unsubscribe = onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+      const membersData: MemberData[] = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data()
+      } as MemberData));
+
+      // Safe in-memory sorting by creation timestamp
+      membersData.sort((a, b) => {
+        const timeA = a.timestamp?.seconds || 0;
+        const timeB = b.timestamp?.seconds || 0;
+        return timeB - timeA;
+      });
+
       setAllMembers(membersData);
     });
 
     return () => unsubscribe();
   }, [isAdmin]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 800000) {
-        alert("Photo is too large. Please select an image under 800KB.");
-        e.target.value = "";
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, photo: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // 3. SMART BACKWARD-COMPATIBLE SUBMISSION HANDLER
-  const handleSubmit = async (e: React.FormEvent) => {
+  // 3. SUBMISSION HANDLER (Saves to 'lions_members')
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.phoneNumber || !formData.idNumber || !formData.county || !formData.constituency || !formData.ward || !formData.photo) return;
+    if (!formData.fullName || !formData.phoneNumber || !formData.idNumber || !formData.county || !formData.constituency || !formData.ward) return;
     
     setIsSubmitting(true);
     try {
-      let targetDocId = currentDocId;
+      let targetDocId: string | null = currentDocId;
 
       if (!targetDocId) {
         const q = query(collection(db, "lions_members"), where("idNumber", "==", formData.idNumber.trim()));
@@ -128,7 +130,7 @@ export default function LionsMovementPlatform() {
       setRegisteredUser(formData);
     } catch (error) {
       console.error("Error saving to database:", error);
-      alert("Registration failed. Please try again.");
+      alert("Registration failed. Please check your network or database rules.");
     } finally {
       setIsSubmitting(false);
     }
@@ -148,7 +150,9 @@ export default function LionsMovementPlatform() {
   };
 
   const handleEditCard = () => {
-    setFormData(registeredUser);
+    if (registeredUser) {
+      setFormData(registeredUser);
+    }
     setRegisteredUser(null);
   };
 
@@ -162,13 +166,12 @@ export default function LionsMovementPlatform() {
       county: "",
       constituency: "",
       ward: "",
-      photo: "",
     });
     setRegisteredUser(null);
   };
 
   const handleDownloadCard = async () => {
-    if (!cardRef.current) return;
+    if (!cardRef.current || !registeredUser) return;
     setIsDownloading(true);
     
     try {
@@ -233,7 +236,7 @@ export default function LionsMovementPlatform() {
                         <TableCell colSpan={6} className="text-center text-slate-500 py-6">No members registered yet.</TableCell>
                       </TableRow>
                     ) : (
-                      allMembers.map((member) => (
+                      allMembers.map((member: MemberData) => (
                         <TableRow key={member.id} className="hover:bg-slate-50 transition">
                           <TableCell className="font-semibold text-slate-900">{member.fullName}</TableCell>
                           <TableCell className="text-slate-600">{member.phoneNumber}</TableCell>
@@ -398,17 +401,6 @@ export default function LionsMovementPlatform() {
                       </div>
                     </div>
 
-                    <div className="space-y-2 pt-1">
-                      <div className="flex justify-between items-center">
-                        <Label htmlFor="photo" className="text-xs font-bold uppercase text-slate-600">Passport Photo</Label>
-                        {currentDocId && <span className="text-[10px] font-bold text-amber-600 uppercase">(Leave empty to keep current photo)</span>}
-                      </div>
-                      <Input 
-                        type="file" id="photo" name="photo" accept="image/*" required={!currentDocId} onChange={handlePhotoChange} 
-                        className="text-slate-900 bg-slate-50 border-slate-200 cursor-pointer file:bg-slate-200 file:border-0 file:rounded-sm file:px-3 file:py-1 file:text-xs file:font-bold file:mr-3 file:text-slate-700 hover:file:bg-slate-300 transition" 
-                      />
-                    </div>
-
                     <Button type="submit" disabled={isSubmitting} className="w-full bg-[#D97706] hover:bg-amber-600 text-slate-950 font-black py-5 rounded transition tracking-wide uppercase mt-4 shadow-lg">
                       {isSubmitting ? "Processing..." : currentDocId ? "Update & Regenerate Card" : "Register & Issue Digital Card"}
                     </Button>
@@ -436,13 +428,10 @@ export default function LionsMovementPlatform() {
                   {/* IDENTIFICATION BLOCK */}
                   <div className="absolute top-5 right-5 flex flex-col items-end space-y-2 z-10">
                     <span className="bg-[#D97706] text-slate-950 text-[10px] sm:text-xs font-black px-3 py-1 rounded uppercase tracking-wider border border-amber-300">MEMBER</span>
-                    {registeredUser.photo && (
-                      <img src={registeredUser.photo} alt="Member ID" className="w-[65px] h-[80px] sm:w-[75px] sm:h-[95px] object-cover rounded border-2 border-[#D97706] shadow-md bg-black" />
-                    )}
                   </div>
 
                   {/* DEMOGRAPHIC VARIABLES */}
-                  <div className="absolute top-[42%] left-6 right-32 sm:right-40 space-y-3 sm:space-y-4">
+                  <div className="absolute top-[42%] left-6 right-6 space-y-3 sm:space-y-4">
                     <div>
                       <p className="text-[9px] sm:text-[10px] text-amber-400 uppercase tracking-wider font-semibold">Name</p>
                       <p className="text-lg sm:text-2xl font-bold tracking-wide uppercase leading-tight truncate">{registeredUser.fullName}</p>
@@ -480,7 +469,7 @@ export default function LionsMovementPlatform() {
                   </Button>
 
                   <Button onClick={handleEditCard} className="w-full bg-amber-600 hover:bg-amber-700 text-slate-950 font-black py-5 rounded shadow uppercase tracking-wide text-sm border-b-2 border-amber-900">
-                    ✏️ Edit My Details / Update Photo
+                    ✏️ Edit My Details
                   </Button>
                   
                   <div className="text-center pt-2">
