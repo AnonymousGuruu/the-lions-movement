@@ -431,7 +431,7 @@ export default function LionsMovementPlatform() {
                           className="flex h-9 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#D97706]"
                         >
                           <option value="Aspirant">Aspirant</option>
-                          <option value="Mobilzer">Mobilzer</option>
+                          <option value="Mobilizer">Mobilizer</option>
                           <option value="Volunteer">Volunteer</option>
                         </select>
                       </div>
@@ -467,19 +467,23 @@ export default function LionsMovementPlatform() {
                   </div>
 
                   {/* DEMOGRAPHIC VARIABLES */}
-                  <div className="absolute top-[42%] left-6 right-6 space-y-3 sm:space-y-4">
+                  <div className="absolute top-[38%] left-6 right-6 space-y-2 sm:space-y-3">
                     <div>
                       <p className="text-[9px] sm:text-[10px] text-amber-400 uppercase tracking-wider font-semibold">Name</p>
-                      <p className="text-lg sm:text-2xl font-bold tracking-wide uppercase leading-tight truncate">{registeredUser.fullName}</p>
+                      <p className="text-base sm:text-xl font-bold tracking-wide uppercase leading-tight truncate">{registeredUser.fullName}</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <p className="text-[9px] sm:text-[10px] text-amber-400 uppercase tracking-wider font-semibold">ID Number</p>
-                        <p className="text-sm sm:text-base font-mono font-bold tracking-wider">{registeredUser.idNumber}</p>
+                        <p className="text-[8px] sm:text-[9px] text-amber-400 uppercase tracking-wider font-semibold">ID Number</p>
+                        <p className="text-xs sm:text-sm font-mono font-bold tracking-wider">{registeredUser.idNumber}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] sm:text-[10px] text-amber-400 uppercase tracking-wider font-semibold">Location</p>
-                        <p className="text-[11px] sm:text-xs font-bold tracking-wide leading-tight">{registeredUser.county} <br/> <span className="text-slate-300 font-normal">{registeredUser.constituency}</span></p>
+                        <p className="text-[8px] sm:text-[9px] text-amber-400 uppercase tracking-wider font-semibold">Party</p>
+                        <p className="text-xs sm:text-sm font-bold tracking-wider uppercase truncate">{registeredUser.party || "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] sm:text-[9px] text-amber-400 uppercase tracking-wider font-semibold">Location</p>
+                        <p className="text-[10px] sm:text-xs font-bold tracking-wide leading-tight">{registeredUser.county} <br/> <span className="text-slate-300 font-normal">{registeredUser.constituency}</span></p>
                       </div>
                     </div>
                   </div>
