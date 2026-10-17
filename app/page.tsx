@@ -17,6 +17,8 @@ interface MemberData {
   county: string;
   constituency: string;
   ward: string;
+  party: string;
+  position: string;
   id?: string;
   [key: string]: any;
 }
@@ -31,6 +33,8 @@ export default function LionsMovementPlatform() {
     county: "",
     constituency: "",
     ward: "",
+    party: "",
+    position: "Volunteer",
   });
   
   const [registeredUser, setRegisteredUser] = useState<MemberData | null>(null);
@@ -96,7 +100,7 @@ export default function LionsMovementPlatform() {
   // 3. SUBMISSION HANDLER (Saves to 'lions_members')
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.phoneNumber || !formData.idNumber || !formData.county || !formData.constituency || !formData.ward) return;
+    if (!formData.fullName || !formData.phoneNumber || !formData.idNumber || !formData.county || !formData.constituency || !formData.ward || !formData.party || !formData.position) return;
     
     setIsSubmitting(true);
     try {
@@ -166,6 +170,8 @@ export default function LionsMovementPlatform() {
       county: "",
       constituency: "",
       ward: "",
+      party: "",
+      position: "Volunteer",
     });
     setRegisteredUser(null);
   };
@@ -228,12 +234,14 @@ export default function LionsMovementPlatform() {
                       <TableHead className="font-bold text-slate-700">County</TableHead>
                       <TableHead className="font-bold text-slate-700">Constituency</TableHead>
                       <TableHead className="font-bold text-slate-700">Ward</TableHead>
+                      <TableHead className="font-bold text-slate-700">Party</TableHead>
+                      <TableHead className="font-bold text-slate-700">Position</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {allMembers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-slate-500 py-6">No members registered yet.</TableCell>
+                        <TableCell colSpan={8} className="text-center text-slate-500 py-6">No members registered yet.</TableCell>
                       </TableRow>
                     ) : (
                       allMembers.map((member: MemberData) => (
@@ -248,6 +256,12 @@ export default function LionsMovementPlatform() {
                           </TableCell>
                           <TableCell className="text-slate-600">{member.constituency}</TableCell>
                           <TableCell className="text-slate-600">{member.ward}</TableCell>
+                          <TableCell className="text-slate-600 font-semibold">{member.party || "N/A"}</TableCell>
+                          <TableCell>
+                            <span className="bg-slate-100 text-slate-900 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-200">
+                              {member.position || "Volunteer"}
+                            </span>
+                          </TableCell>
                         </TableRow>
                       ))
                     )}
@@ -401,6 +415,28 @@ export default function LionsMovementPlatform() {
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="party" className="text-xs font-bold uppercase text-slate-600">Party</Label>
+                        <Input 
+                          id="party" name="party" required value={formData.party} onChange={handleInputChange} 
+                          placeholder="e.g., Party Name" 
+                          className="text-slate-900 placeholder:text-slate-400 bg-slate-50 border-slate-200" 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="position" className="text-xs font-bold uppercase text-slate-600">Position</Label>
+                        <select 
+                          id="position" name="position" required value={formData.position} onChange={handleInputChange} 
+                          className="flex h-9 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#D97706]"
+                        >
+                          <option value="Aspirant">Aspirant</option>
+                          <option value="Mobilzer">Mobilzer</option>
+                          <option value="Volunteer">Volunteer</option>
+                        </select>
+                      </div>
+                    </div>
+
                     <Button type="submit" disabled={isSubmitting} className="w-full bg-[#D97706] hover:bg-amber-600 text-slate-950 font-black py-5 rounded transition tracking-wide uppercase mt-4 shadow-lg">
                       {isSubmitting ? "Processing..." : currentDocId ? "Update & Regenerate Card" : "Register & Issue Digital Card"}
                     </Button>
@@ -427,7 +463,7 @@ export default function LionsMovementPlatform() {
 
                   {/* IDENTIFICATION BLOCK */}
                   <div className="absolute top-5 right-5 flex flex-col items-end space-y-2 z-10">
-                    <span className="bg-[#D97706] text-slate-950 text-[10px] sm:text-xs font-black px-3 py-1 rounded uppercase tracking-wider border border-amber-300">MEMBER</span>
+                    <span className="bg-[#D97706] text-slate-950 text-[10px] sm:text-xs font-black px-3 py-1 rounded uppercase tracking-wider border border-amber-300">{registeredUser.position || "Volunteer"}</span>
                   </div>
 
                   {/* DEMOGRAPHIC VARIABLES */}
